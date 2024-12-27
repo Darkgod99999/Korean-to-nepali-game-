@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korean to nepali matching game  </title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        .card {
+            background-color: #f9f9f9;
+            border: 2px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 18px;
+            margin: 5px 0;
+            transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
+        }
+
+        .card.selected {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .card.matched {
+            background-color: #d4edda;
+            color: #155724;
+            box-shadow: 0 0 10px 3px neon green;
+        }
+
+        .card.incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+            box-shadow: 0 0 10px 3px neon red;
+        }
+
+        .progress-bar {
+            margin: 20px 0;
+            width: 100%;
+            height: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-inner {
+            width: 0%;
+            height: 100%;
+            background-color: #4caf50;
+            transition: width 0.3s;
+        }
+
+        #continueButton, #reviewButton {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4caf50;
+            color: #fff;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #continueButton:hover, #reviewButton:hover {
+            background-color: #45a049;
+        }
+
+        .flashcard {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Korean to nepali matching game </h1>
+        <div class="stats">
+            <p>Matched: <span id="matchedCount">0</span> | Wrong: <span id="wrongCount">0</span></p>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-bar-inner" id="progress"></div>
+        </div>
+        <div class="grid">
+            <div class="column" id="koreanColumn"></div>
+            <div class="column" id="nepaliColumn"></div>
+        </div>
+        <button id="continueButton" onclick="continueGame()">Continue</button>
+        <button id="reviewButton" onclick="reviewCards()">Review</button>
+    </div>
+
+    <script>
+    const allPairs = [
+{ korean: "시간", nepali: "समय" },
+            { korean: "오후", nepali: "दिउँसो" },    { nepali: "दिउँसो", korean: "오후" },
+    { nepali: "बिहान", korean: "오전" },
+    { nepali: "त्यसैले", korean: "그래서" },
+    { nepali: "पुछ्नु", korean: "닦다" },
+    { nepali: "पुस्तक", korean: "책" },
+    { nepali: "विद्यालय", korean: "학교" },
+    { nepali: "शिक्षक", korean: "선생님" },
+    { nepali: "विद्यार्थी", korean: "학생" },
+    
+    ];
+
+    let selectedPairs = [];
+    let selectedCards = [];
+    let matchedCount = 0;
+    let wrongCount = 0;
+    let matchedCards = [];
+    let wrongCards = [];
+    let totalMatched = 0; // Tracks the total matched count across games
+    let totalWrong = 0; // Tracks the total wrong count across games
+
+    function shufflePairs() {
+        selectedPairs = allPairs.sort(() => Math.random() - 0.5).slice(0, 7);
+    }
+
+    function renderGameGrid() {
+        const koreanColumn = document.getElementById("koreanColumn");
+        const nepaliColumn = document.getElementById("nepaliColumn");
+        koreanColumn.innerHTML = "";
+        nepaliColumn.innerHTML = "";
+
+        const shuffledNepali = selectedPairs.map(pair => pair.nepali).sort(() => Math.random() - 0.5);
+        const shuffledKorean = selectedPairs.map(pair => pair.korean).sort(() => Math.random() - 0.5);
+
+        shuffledNepali.forEach(nepali => {
+            const card = document.createElement("div");
+            card.classList.add("card");
+            card.textContent = nepali;
+            card.dataset.type = "nepali";
+            card.addEventListener("click", () => selectCard(card));
+            nepaliColumn.appendChild(card);
+        });
+
+        shuffledKorean.forEach(korean => {
+            const card = document.createElement("div");
+            card.classList.add("card");
+            card.textContent = korean;
+            card.dataset.type = "korean";
+            card.addEventListener("click", () => selectCard(card));
+            koreanColumn.appendChild(card);
+        });
+    }
+
+    function selectCard(card) {
+        // Prevent duplicate card selection
+        if (selectedCards.includes(card) || card.classList.contains("matched")) return;
+
+        if (selectedCards.length === 1 && card.dataset.type === selectedCards[0].dataset.type) {
+            selectedCards[0].classList.remove("selected");
+            selectedCards = [];
+            return;
+        }
+
+        card.classList.add("selected");
+        selectedCards.push(card);
+
+        const lang = card.dataset.type === "nepali" ? "ne-NP" : "ko-KR";
+        playVoice(card.textContent, lang);
+
+        if (selectedCards.length === 2) {
+            checkMatch();
+        }
+    }
+
+    function playVoice(text, lang) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        speechSynthesis.speak(utterance);
+    }
+
+    function checkMatch() {
+        const [card1, card2] = selectedCards;
+
+        const isMatch = selectedPairs.some(
+            pair =>
+                (pair.nepali === card1.textContent && pair.korean === card2.textContent) ||
+                (pair.korean === card1.textContent && pair.nepali === card2.textContent)
+        );
+
+        if (isMatch) {
+            card1.classList.add("matched");
+            card2.classList.add("matched");
+            matchedCards.push({ korean: card2.textContent, nepali: card1.textContent });
+            setTimeout(() => {
+                card1.style.visibility = "hidden";
+                card2.style.visibility = "hidden";
+            }, 500);
+            matchedCount++;
+            totalMatched++;
+        } else {
+            card1.classList.add("incorrect");
+            card2.classList.add("incorrect");
+            wrongCards.push({ korean: card2.textContent, nepali: card1.textContent });
+            wrongCount++;
+            totalWrong++;
+            setTimeout(() => {
+                card1.classList.remove("selected", "incorrect");
+                card2.classList.remove("selected", "incorrect");
+            }, 1000);
+        }
+
+        selectedCards = [];
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById("matchedCount").textContent = totalMatched;
+        document.getElementById("wrongCount").textContent = totalWrong;
+
+        const progress = document.getElementById("progress");
+        progress.style.width = `${(matchedCount / selectedPairs.length) * 100}%`;
+
+        if (matchedCount === selectedPairs.length) {
+            document.getElementById("continueButton").style.display = "block";
+        }
+    }
+
+    function continueGame() {
+        // Reset only necessary elements
+        shufflePairs();
+        matchedCount = 0; // Reset current game progress
+        wrongCount = 0; // Reset current game progress
+        selectedCards = [];
+        document.getElementById("progress").style.width = "0%";
+        document.getElementById("continueButton").style.display = "none";
+        renderGameGrid();
+    }
+
+    function reviewCards() {
+        alert("Matched Cards: " + JSON.stringify(matchedCards) + "\nWrong Cards: " + JSON.stringify(wrongCards));
+    }
+
+    shufflePairs();
+    renderGameGrid();
+</script>
